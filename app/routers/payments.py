@@ -1,11 +1,13 @@
-# Ödeme simülasyonu işlemleri
+# -------------------------------------------------
+# Ödeme Simülasyonu İşlemleri
+# -------------------------------------------------
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import Booking, Payment, User
+from app.models import Booking, Item, Notification, Payment, User
 from app.schemas import PaymentCreate, PaymentResponse
 
 
@@ -26,6 +28,7 @@ def create_payment(
     Gerçek ödeme alınmaz.
     """
 
+    # Rezervasyonu bul
     booking = db.query(Booking).filter(
         Booking.id == payment_data.booking_id
     ).first()
@@ -36,22 +39,36 @@ def create_payment(
             detail="Rezervasyon bulunamadı."
         )
 
+    # Sadece rezervasyonu oluşturan kullanıcı ödeme yapabilir
     if booking.renter_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bu rezervasyon için ödeme yapma yetkiniz yok."
         )
 
+    # İptal edilmiş rezervasyona ödeme yapılamaz
     if booking.status == "cancelled":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="İptal edilmiş rezervasyon için ödeme yapılamaz."
         )
 
+    # Ödenmiş rezervasyona tekrar ödeme yapılamaz
     if booking.status == "paid":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bu rezervasyon için ödeme zaten yapılmış."
+        )
+
+    # Rezervasyonun bağlı olduğu ilanı bul
+    item = db.query(Item).filter(
+        Item.id == booking.item_id
+    ).first()
+
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="İlan bulunamadı."
         )
 
     # Demo ödeme kuralı:
@@ -59,9 +76,20 @@ def create_payment(
     if payment_data.card_number == "4242424242424242":
         payment_status = "simulated_success"
         booking.status = "paid"
+
+        # Ödeme başarılı olunca ilan sahibine bildirim oluştur
+        notification = Notification(
+            user_id=item.owner_id,
+            title="Ödeme Tamamlandı",
+            message=f"{item.title} ilanınız için ödeme başarıyla tamamlandı."
+        )
+
+        db.add(notification)
+
     else:
         payment_status = "simulated_failed"
 
+    # Kartın tamamını değil, sadece son 4 hanesini saklıyoruz.
     payment = Payment(
         booking_id=booking.id,
         user_id=current_user.id,

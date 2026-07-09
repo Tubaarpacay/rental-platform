@@ -1,6 +1,9 @@
 # Tarih ve saat işlemleri için gerekli kütüphaneler
 from datetime import datetime, timedelta, timezone
 
+# Güvenli token üretmek için
+import secrets
+
 # JWT oluşturma ve doğrulama işlemleri için
 from jose import jwt, JWTError
 
@@ -78,23 +81,49 @@ def create_access_token(data: dict):
     JWT Access Token oluşturur.
     """
 
-    # Gelen veriyi kopyala
     to_encode = data.copy()
 
-    # Token'ın son kullanma tarihini hesapla
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
-    # Son kullanma tarihini token içine ekle
     to_encode.update({"exp": expire})
 
-    # JWT token üret ve geri döndür
     return jwt.encode(
         to_encode,
         SECRET_KEY,
         algorithm=ALGORITHM
     )
+
+
+def create_password_reset_token() -> str:
+    """
+    Şifre sıfırlama işlemi için güvenli ve rastgele token üretir.
+    Bu token kullanıcıya e-posta ile gönderilecek.
+    """
+
+    return secrets.token_urlsafe(32)
+
+
+def create_password_reset_expire_time() -> datetime:
+    """
+    Şifre sıfırlama token'ı için geçerlilik süresi oluşturur.
+    Bu örnekte token 30 dakika geçerli olur.
+    """
+
+    return datetime.now(timezone.utc) + timedelta(minutes=30)
+
+
+def is_password_reset_token_expired(expire_time: datetime) -> bool:
+    """
+    Şifre sıfırlama token süresinin dolup dolmadığını kontrol eder.
+    Süre dolduysa True, dolmadıysa False döndürür.
+    """
+
+    if expire_time is None:
+        return True
+
+    return datetime.now(timezone.utc) > expire_time
 
 
 def get_current_user(
@@ -106,7 +135,6 @@ def get_current_user(
     giriş yapan kullanıcıyı veritabanından bulur.
     """
 
-    # Kimlik doğrulama hatası
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Kimlik doğrulama başarısız.",
@@ -114,14 +142,12 @@ def get_current_user(
     )
 
     try:
-        # JWT token'ı çöz
         payload = jwt.decode(
             token,
             SECRET_KEY,
             algorithms=[ALGORITHM]
         )
 
-        # Email bilgisini al
         email = payload.get("sub")
 
         if email is None:
@@ -130,7 +156,6 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    # Kullanıcıyı veritabanında ara
     user = db.query(User).filter(
         User.email == email
     ).first()

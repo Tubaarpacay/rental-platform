@@ -17,6 +17,25 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+# -------------------------------------------------
+# Password Reset / Şifre Sıfırlama Şemaları
+# -------------------------------------------------
+
+# Şifremi unuttum isteği için kullanılır.
+# Kullanıcı sadece e-posta adresini gönderir.
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+# Şifre sıfırlama işlemi için kullanılır.
+# Kullanıcı e-posta ile gelen token ve yeni şifresini gönderir.
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(
+        min_length=6,
+        max_length=72
+    )
+
 
 class UserResponse(BaseModel):
     id: int
@@ -257,6 +276,53 @@ class NotificationResponse(BaseModel):
     title: str
     message: str
     is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# -------------------------------------------------
+# Refund / Para İadesi Şemaları
+# -------------------------------------------------
+
+class RefundCreate(BaseModel):
+    booking_id: int
+    reason: str | None = None
+
+
+class RefundResponse(BaseModel):
+    id: int
+    booking_id: int
+    payment_id: int
+    user_id: int
+    amount: Decimal
+    reason: str | None
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# -------------------------------------------------
+# Return / Ürün Geri Gönderme Şemaları
+# -------------------------------------------------
+
+class ReturnCreate(BaseModel):
+    booking_id: int
+    cargo_company: str | None = None
+    tracking_number: str | None = None
+    note: str | None = None
+
+
+class ReturnResponse(BaseModel):
+    id: int
+    booking_id: int
+    renter_id: int
+    owner_id: int
+    cargo_company: str | None
+    tracking_number: str | None
+    note: str | None
+    status: str
     created_at: datetime
 
     class Config:

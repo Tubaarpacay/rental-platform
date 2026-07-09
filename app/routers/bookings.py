@@ -12,21 +12,36 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 
 # Veritabanı modelleri
-from app.models import Booking, Item, User, Address
+from app.models import (
+    Booking,
+    Item,
+    User,
+    Address,
+    Notification
+)
 
 # Pydantic şemaları
-from app.schemas import BookingCreate, BookingResponse
+from app.schemas import (
+    BookingCreate,
+    BookingResponse
+)
 
 # JWT ile giriş yapan kullanıcıyı almak için
 from app.auth import get_current_user
 
 
+# -------------------------------------------------
+# Router Tanımlama
+# -------------------------------------------------
 router = APIRouter(
     prefix="/bookings",
     tags=["Bookings"]
 )
 
 
+# -------------------------------------------------
+# Yeni Rezervasyon Oluşturma
+# -------------------------------------------------
 @router.post("/", response_model=BookingResponse)
 def create_booking(
     booking_data: BookingCreate,
@@ -34,20 +49,27 @@ def create_booking(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Giriş yapan kullanıcının seçtiği ilan için rezervasyon oluşturur.
+    Giriş yapan kullanıcının
+    seçtiği ilan için rezervasyon oluşturur.
     """
 
+    # -------------------------------------------------
     # İlan gerçekten var mı kontrol et
+    # -------------------------------------------------
     item = db.query(Item).filter(
         Item.id == booking_data.item_id,
         Item.is_active == True
     ).first()
 
-        # -------------------------------------------------
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="İlan bulunamadı."
+        )
+
+    # -------------------------------------------------
     # Teslimat adresini kontrol et
     # -------------------------------------------------
-    address = None
-
     if booking_data.address_id is not None:
 
         address = db.query(Address).filter(
@@ -60,34 +82,34 @@ def create_booking(
                 detail="Adres bulunamadı."
             )
 
-        # Kullanıcı sadece kendi adresini seçebilir.
+        # Kullanıcı sadece kendi adresini seçebilir
         if address.user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Bu adres size ait değil."
             )
 
-    if not item:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="İlan bulunamadı."
-        )
-
+    # -------------------------------------------------
     # Kullanıcı kendi ilanını kiralayamaz
+    # -------------------------------------------------
     if item.owner_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kendi ilanınızı kiralayamazsınız."
         )
 
-    # Bitiş tarihi başlangıçtan önce olamaz
+    # -------------------------------------------------
+    # Tarih kontrolü
+    # -------------------------------------------------
     if booking_data.end_date < booking_data.start_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bitiş tarihi başlangıç tarihinden önce olamaz."
         )
 
-    # Aynı item için tarih çakışması var mı kontrol et
+    # -------------------------------------------------
+    # Aynı tarihlerde başka rezervasyon var mı?
+    # -------------------------------------------------
     overlapping_booking = db.query(Booking).filter(
         Booking.item_id == booking_data.item_id,
         Booking.status != "cancelled",
@@ -101,46 +123,70 @@ def create_booking(
             detail="Bu tarihler arasında ilan zaten rezerve edilmiş."
         )
 
-    # Kaç gün kiralanacağını hesapla
+    # -------------------------------------------------
+    # Kiralama süresini hesapla
+    # -------------------------------------------------
     rental_days = (
         booking_data.end_date -
         booking_data.start_date
     ).days + 1
 
+    # -------------------------------------------------
     # Toplam fiyatı hesapla
+    # -------------------------------------------------
     total_price = item.daily_price * rental_days
 
+    # -------------------------------------------------
     # Yeni rezervasyon oluştur
+    # -------------------------------------------------
     new_booking = Booking(
-    item_id=item.id,
-    renter_id=current_user.id,
-    address_id=booking_data.address_id,
-    start_date=booking_data.start_date,
-    end_date=booking_data.end_date,
-    total_price=total_price,
-    status="pending"
-)
+        item_id=item.id,
+        renter_id=current_user.id,
+        address_id=booking_data.address_id,
+        start_date=booking_data.start_date,
+        end_date=booking_data.end_date,
+        total_price=total_price,
+        status="pending"
+    )
 
-    # Veritabanına kaydet
+    # -------------------------------------------------
+    # İlan sahibine bildirim oluştur
+    # -------------------------------------------------
+    notification = Notification(
+        user_id=item.owner_id,
+        title="Yeni Rezervasyon",
+        message=f"{item.title} ilanınız için yeni bir rezervasyon oluşturuldu."
+    )
+
+    # -------------------------------------------------
+    # Rezervasyonu ve bildirimi kaydet
+    # -------------------------------------------------
     db.add(new_booking)
+    db.add(notification)
+
     db.commit()
     db.refresh(new_booking)
 
     return new_booking
 
 
+# -------------------------------------------------
+# Kullanıcının Rezervasyonlarını Listeleme
+# -------------------------------------------------
 @router.get("/", response_model=list[BookingResponse])
 def list_my_bookings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Giriş yapan kullanıcının oluşturduğu rezervasyonları listeler.
+    Giriş yapan kullanıcının
+    oluşturduğu rezervasyonları listeler.
     """
 
     return db.query(Booking).filter(
         Booking.renter_id == current_user.id
     ).all()
+
 
 # -------------------------------------------------
 # Rezervasyon İptal Etme
@@ -152,39 +198,46 @@ def cancel_booking(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Giriş yapan kullanıcının kendi rezervasyonunu iptal etmesini sağlar.
+    Giriş yapan kullanıcının
+    kendi rezervasyonunu iptal etmesini sağlar.
     """
 
+    # -------------------------------------------------
     # Rezervasyonu bul
+    # -------------------------------------------------
     booking = db.query(Booking).filter(
         Booking.id == booking_id
     ).first()
 
-    # Rezervasyon yoksa hata döndür
     if not booking:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Rezervasyon bulunamadı."
         )
 
+    # -------------------------------------------------
     # Kullanıcı sadece kendi rezervasyonunu iptal edebilir
+    # -------------------------------------------------
     if booking.renter_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bu rezervasyonu iptal etme yetkiniz yok."
         )
 
-    # Zaten iptal edilmişse tekrar iptal edilmesin
+    # -------------------------------------------------
+    # Rezervasyon zaten iptal edilmiş mi?
+    # -------------------------------------------------
     if booking.status == "cancelled":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Rezervasyon zaten iptal edilmiş."
         )
 
-    # Rezervasyon durumunu iptal olarak güncelle
+    # -------------------------------------------------
+    # Rezervasyonu iptal et
+    # -------------------------------------------------
     booking.status = "cancelled"
 
-    # Değişikliği veritabanına kaydet
     db.commit()
     db.refresh(booking)
 

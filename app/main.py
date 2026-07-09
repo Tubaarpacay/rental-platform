@@ -18,7 +18,9 @@ from app.routers import (
     messages,
     reviews,
     favorites,
-    notifications
+    notifications,
+    refunds,
+    returns
 )
 
 # -------------------------------------------------
@@ -53,6 +55,8 @@ app.include_router(messages.router)
 app.include_router(reviews.router)
 app.include_router(favorites.router)
 app.include_router(notifications.router)
+app.include_router(refunds.router)
+app.include_router(returns.router)
 
 
 # -------------------------------------------------

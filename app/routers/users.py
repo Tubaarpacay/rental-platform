@@ -5,13 +5,22 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
-from app.schemas import UserCreate, UserResponse
+from app.schemas import (
+    UserCreate,
+    UserResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest
+)
 from app.auth import (
     hash_password,
     verify_password,
     create_access_token,
-    get_current_user
+    get_current_user,
+    create_password_reset_token,
+    create_password_reset_expire_time,
+    is_password_reset_token_expired
 )
+from app.email_utils import send_password_reset_email
 
 router = APIRouter(
     prefix="/users",
@@ -31,29 +40,24 @@ def register_user(
     Yeni kullanıcı oluşturur.
     """
 
-    # Aynı email daha önce kayıt olmuş mu kontrol et
     existing_user = db.query(User).filter(
         User.email == user_data.email
     ).first()
 
-    # Eğer email kayıtlıysa hata döndür
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bu email adresi zaten kayıtlı."
         )
 
-    # Şifreyi güvenli şekilde hashle
     hashed_password = hash_password(user_data.password)
 
-    # Yeni kullanıcı oluştur
     new_user = User(
         email=user_data.email,
         full_name=user_data.full_name,
         hashed_password=hashed_password
     )
 
-    # Veritabanına kaydet
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -75,19 +79,16 @@ def login_user(
     Swagger OAuth2 ile uyumlu şekilde form-data kullanır.
     """
 
-    # Email'e göre kullanıcıyı bul
     user = db.query(User).filter(
         User.email == username
     ).first()
 
-    # Kullanıcı bulunamadıysa hata döndür
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email veya şifre hatalı."
         )
 
-    # Şifre yanlışsa hata döndür
     if not verify_password(
         password,
         user.hashed_password
@@ -97,15 +98,104 @@ def login_user(
             detail="Email veya şifre hatalı."
         )
 
-    # JWT Access Token oluştur
     access_token = create_access_token(
         data={"sub": user.email}
     )
 
-    # Token'ı kullanıcıya döndür
     return {
         "access_token": access_token,
         "token_type": "bearer"
+    }
+
+
+# -------------------------------------------------
+# Şifremi Unuttum İşlemi
+# -------------------------------------------------
+@router.post("/forgot-password")
+def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Kullanıcı e-posta adresini gönderir.
+
+    Güvenlik nedeniyle email sistemde kayıtlı olsa da olmasa da
+    aynı mesaj döndürülür. Böylece sistemde hangi e-postaların
+    kayıtlı olduğu dışarıdan anlaşılamaz.
+    """
+
+    user = db.query(User).filter(
+        User.email == request.email
+    ).first()
+
+    if not user:
+        return {
+            "message": "Eğer bu email adresi kayıtlıysa şifre sıfırlama bağlantısı gönderildi."
+        }
+
+    reset_token = create_password_reset_token()
+    reset_expires = create_password_reset_expire_time()
+
+    user.reset_password_token = reset_token
+    user.reset_password_expires = reset_expires
+
+    db.commit()
+    db.refresh(user)
+
+    reset_link = f"http://127.0.0.1:8000/reset-password?token={reset_token}"
+
+    send_password_reset_email(
+        receiver_email=user.email,
+        reset_link=reset_link
+    )
+
+    return {
+        "message": "Eğer bu email adresi kayıtlıysa şifre sıfırlama bağlantısı gönderildi."
+    }
+
+
+# -------------------------------------------------
+# Şifre Sıfırlama İşlemi
+# -------------------------------------------------
+@router.post("/reset-password")
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Kullanıcı token ve yeni şifre gönderir.
+    Token doğruysa ve süresi geçmediyse şifre güncellenir.
+    """
+
+    user = db.query(User).filter(
+        User.reset_password_token == request.token
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz şifre sıfırlama token'ı."
+        )
+
+    if is_password_reset_token_expired(
+        user.reset_password_expires
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Şifre sıfırlama token'ının süresi dolmuş."
+        )
+
+    user.hashed_password = hash_password(
+        request.new_password
+    )
+
+    user.reset_password_token = None
+    user.reset_password_expires = None
+
+    db.commit()
+
+    return {
+        "message": "Şifre başarıyla sıfırlandı."
     }
 
 

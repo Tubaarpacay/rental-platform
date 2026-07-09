@@ -27,6 +27,8 @@ class User(Base):
     full_name = Column(String, nullable=False)
     is_verified = Column(Boolean, default=False)
     verification_token = Column(String, nullable=True)
+    reset_password_token = Column(String, nullable=True)
+    reset_password_expires = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -350,6 +352,111 @@ class Notification(Base):
     is_read = Column(
         Boolean,
         default=False
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+
+# -------------------------------------------------
+# Para İadesi Tablosu
+# -------------------------------------------------
+class Refund(Base):
+    __tablename__ = "refunds"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    booking_id = Column(
+        Integer,
+        ForeignKey("bookings.id"),
+        nullable=False
+    )
+
+    payment_id = Column(
+        Integer,
+        ForeignKey("payments.id"),
+        nullable=False
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    amount = Column(
+        Numeric(10, 2),
+        nullable=False
+    )
+
+    reason = Column(
+        Text,
+        nullable=True
+    )
+
+    status = Column(
+        String,
+        default="simulated_refunded"
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+
+# -------------------------------------------------
+# Ürün İade / Geri Gönderme Tablosu
+# -------------------------------------------------
+class ReturnRequest(Base):
+    __tablename__ = "return_requests"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    booking_id = Column(
+        Integer,
+        ForeignKey("bookings.id"),
+        nullable=False
+    )
+
+    renter_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    owner_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    cargo_company = Column(
+        String,
+        nullable=True
+    )
+
+    tracking_number = Column(
+        String,
+        nullable=True
+    )
+
+    note = Column(
+        Text,
+        nullable=True
+    )
+
+    status = Column(
+        String,
+        default="return_requested"
     )
 
     created_at = Column(
