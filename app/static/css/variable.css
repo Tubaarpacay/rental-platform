@@ -1,0 +1,45 @@
+:root{
+
+    /* Ana Renkler */
+    --primary:#2457d6;
+    --primary-dark:#183c97;
+    --primary-light:#eef3ff;
+
+    /* Yazılar */
+    --text-dark:#1d2746;
+    --text:#374151;
+    --text-muted:#6b7280;
+
+    /* Arka Plan */
+    --background:#f5f8ff;
+    --surface:#ffffff;
+
+    /* Border */
+    --border:#dce5f5;
+
+    /* Başarı */
+    --success:#16a34a;
+
+    /* Hata */
+    --danger:#dc2626;
+
+    /* Uyarı */
+    --warning:#f59e0b;
+
+    /* Gölgeler */
+    --shadow-sm:
+        0 8px 20px rgba(0,0,0,.06);
+
+    --shadow-md:
+        0 18px 45px rgba(22,40,80,.10);
+
+    --shadow-lg:
+        0 35px 80px rgba(22,40,80,.16);
+
+    /* Radius */
+
+    --radius-sm:10px;
+    --radius:18px;
+    --radius-lg:28px;
+
+}

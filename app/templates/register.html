@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}
+Kayıt Ol | Rental Platform
+{% endblock %}
+
+{% block content %}
+
+<section class="register-page">
+
+    <!-- Dekoratif arka plan -->
+    <div class="register-background">
+
+        <div class="register-blob blob-one"></div>
+        <div class="register-blob blob-two"></div>
+        <div class="register-blob blob-three"></div>
+
+        <div class="floating-product product-camera">
+            <span>📷</span>
+            <small>Kamera</small>
+        </div>
+
+        <div class="floating-product product-tent">
+            <span>⛺</span>
+            <small>Çadır</small>
+        </div>
+
+        <div class="floating-product product-drill">
+            <span>🛠️</span>
+            <small>Matkap</small>
+        </div>
+
+        <div class="floating-product product-suitcase">
+            <span>🧳</span>
+            <small>Valiz</small>
+        </div>
+
+    </div>
+
+
+    <!-- Kayıt kartı -->
+    <div class="register-card">
+
+        <div class="register-card-header">
+
+            <span class="register-card-label">
+                Ücretsiz hesap oluştur
+            </span>
+
+            <h1>
+                Aramıza katıl
+            </h1>
+
+            <p>
+                Eşyalarını kiraya vermek veya ihtiyacın olan
+                ürünleri keşfetmek için hesabını oluştur.
+            </p>
+
+        </div>
+
+        <div
+            id="register-message"
+            class="alert d-none"
+            role="alert"
+        ></div>
+
+        <form id="register-form">
+
+            <div class="mb-4">
+
+                <label
+                    for="full_name"
+                    class="form-label"
+                >
+                    Ad Soyad
+                </label>
+
+                <input
+                    type="text"
+                    id="full_name"
+                    name="full_name"
+                    class="form-control form-control-lg"
+                    placeholder="Adınızı ve soyadınızı girin"
+                    minlength="2"
+                    maxlength="100"
+                    required
+                >
+
+            </div>
+
+            <div class="mb-4">
+
+                <label
+                    for="email"
+                    class="form-label"
+                >
+                    E-posta
+                </label>
+
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-control form-control-lg"
+                    placeholder="ornek@email.com"
+                    required
+                >
+
+            </div>
+
+            <div class="mb-3">
+
+                <label
+                    for="password"
+                    class="form-label"
+                >
+                    Şifre
+                </label>
+
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="form-control form-control-lg"
+                    placeholder="En az 6 karakter"
+                    minlength="6"
+                    maxlength="72"
+                    required
+                >
+
+            </div>
+
+            <p class="register-password-note">
+                Şifren en az 6 karakterden oluşmalıdır.
+            </p>
+
+            <button
+                type="submit"
+                class="btn btn-primary btn-lg w-100 register-button"
+            >
+                Hesap Oluştur
+            </button>
+
+        </form>
+
+        <div class="register-divider">
+            <span>veya</span>
+        </div>
+
+        <p class="register-login-link">
+            Zaten hesabın var mı?
+
+            <a href="/login-page">
+                Giriş yap
+            </a>
+        </p>
+
+        <a
+            href="/"
+            class="register-home-link"
+        >
+            ← Ana sayfaya dön
+        </a>
+
+    </div>
+
+</section>
+
+{% endblock %}

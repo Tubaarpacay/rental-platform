@@ -1,4 +1,3 @@
-
 # -------------------------------------------------
 # Adres İşlemleri
 # -------------------------------------------------
@@ -80,11 +79,14 @@ def list_my_addresses(
 ):
     """
     Giriş yapan kullanıcının
-    kayıtlı adreslerini listeler.
+    kayıtlı adreslerini en yeni eklenenden
+    en eskiye doğru listeler.
     """
 
     return db.query(Address).filter(
         Address.user_id == current_user.id
+    ).order_by(
+        Address.created_at.desc()
     ).all()
 
 

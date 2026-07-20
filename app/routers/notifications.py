@@ -84,7 +84,12 @@ def mark_notification_as_read(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bu bildirimi güncelleme yetkiniz yok."
         )
-
+    # Bildirim zaten okunmuş mu?
+    if notification.is_read:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu bildirim zaten okunmuş."
+        )
     # Okundu olarak işaretle
     notification.is_read = True
 

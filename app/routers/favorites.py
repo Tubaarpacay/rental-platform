@@ -105,6 +105,8 @@ def list_favorites(
 
     return db.query(Favorite).filter(
         Favorite.user_id == current_user.id
+    ).order_by(
+        Favorite.created_at.desc()
     ).all()
 
 

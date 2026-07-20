@@ -82,20 +82,24 @@ def create_refund(
     if booking.status != "paid":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Sadece ödenmiş rezervasyonlar için iade talebi oluşturulabilir."
+            detail=(
+                "Sadece ödenmiş rezervasyonlar için "
+                "iade talebi oluşturulabilir."
+            )
         )
 
     # -------------------------------------------------
-    # Ödeme kaydını bul
+    # Başarılı ödeme kaydını bul
     # -------------------------------------------------
     payment = db.query(Payment).filter(
-        Payment.booking_id == booking.id
+        Payment.booking_id == booking.id,
+        Payment.status == "simulated_success"
     ).first()
 
     if not payment:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ödeme kaydı bulunamadı."
+            detail="Başarılı ödeme kaydı bulunamadı."
         )
 
     # -------------------------------------------------
@@ -117,6 +121,12 @@ def create_refund(
     item = db.query(Item).filter(
         Item.id == booking.item_id
     ).first()
+
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="İlan bulunamadı."
+        )
 
     # -------------------------------------------------
     # Booking durumunu güncelle
@@ -141,7 +151,10 @@ def create_refund(
     notification = Notification(
         user_id=item.owner_id,
         title="İade Talebi",
-        message=f"{item.title} ilanınız için para iadesi talebi oluşturuldu."
+        message=(
+            f"{item.title} ilanınız için "
+            "para iadesi talebi oluşturuldu."
+        )
     )
 
     # -------------------------------------------------

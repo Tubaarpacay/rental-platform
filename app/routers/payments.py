@@ -17,6 +17,9 @@ router = APIRouter(
 )
 
 
+# -------------------------------------------------
+# Demo Ödeme Oluşturma
+# -------------------------------------------------
 @router.post("/", response_model=PaymentResponse)
 def create_payment(
     payment_data: PaymentCreate,
@@ -26,9 +29,17 @@ def create_payment(
     """
     Demo ödeme işlemi oluşturur.
     Gerçek ödeme alınmaz.
+
+    Test kartı:
+    4242424242424242
+
+    Bu kart numarası başarılı ödeme olarak kabul edilir.
+    Diğer geçerli kart numaraları başarısız ödeme olarak kaydedilir.
     """
 
+    # -------------------------------------------------
     # Rezervasyonu bul
+    # -------------------------------------------------
     booking = db.query(Booking).filter(
         Booking.id == payment_data.booking_id
     ).first()
@@ -39,28 +50,36 @@ def create_payment(
             detail="Rezervasyon bulunamadı."
         )
 
+    # -------------------------------------------------
     # Sadece rezervasyonu oluşturan kullanıcı ödeme yapabilir
+    # -------------------------------------------------
     if booking.renter_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bu rezervasyon için ödeme yapma yetkiniz yok."
         )
 
+    # -------------------------------------------------
     # İptal edilmiş rezervasyona ödeme yapılamaz
+    # -------------------------------------------------
     if booking.status == "cancelled":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="İptal edilmiş rezervasyon için ödeme yapılamaz."
         )
 
+    # -------------------------------------------------
     # Ödenmiş rezervasyona tekrar ödeme yapılamaz
+    # -------------------------------------------------
     if booking.status == "paid":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bu rezervasyon için ödeme zaten yapılmış."
         )
 
+    # -------------------------------------------------
     # Rezervasyonun bağlı olduğu ilanı bul
+    # -------------------------------------------------
     item = db.query(Item).filter(
         Item.id == booking.item_id
     ).first()
@@ -71,9 +90,36 @@ def create_payment(
             detail="İlan bulunamadı."
         )
 
-    # Demo ödeme kuralı:
+    # -------------------------------------------------
+    # Kart numarasını temizle
+    # -------------------------------------------------
+    # Kullanıcı kart numarasını boşluklu veya tireli yazabilir.
+    # Örnek:
+    # 4242 4242 4242 4242
+    # 4242-4242-4242-4242
+    normalized_card_number = (
+        payment_data.card_number
+        .replace(" ", "")
+        .replace("-", "")
+    )
+
+    # -------------------------------------------------
+    # Kart numarasını doğrula
+    # -------------------------------------------------
+    if (
+        not normalized_card_number.isdigit()
+        or len(normalized_card_number) != 16
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Kart numarası 16 rakamdan oluşmalıdır."
+        )
+
+    # -------------------------------------------------
+    # Demo ödeme sonucunu belirle
+    # -------------------------------------------------
     # 4242424242424242 başarılı kabul edilir.
-    if payment_data.card_number == "4242424242424242":
+    if normalized_card_number == "4242424242424242":
         payment_status = "simulated_success"
         booking.status = "paid"
 
@@ -81,7 +127,10 @@ def create_payment(
         notification = Notification(
             user_id=item.owner_id,
             title="Ödeme Tamamlandı",
-            message=f"{item.title} ilanınız için ödeme başarıyla tamamlandı."
+            message=(
+                f"{item.title} ilanınız için ödeme "
+                "başarıyla tamamlandı."
+            )
         )
 
         db.add(notification)
@@ -89,15 +138,22 @@ def create_payment(
     else:
         payment_status = "simulated_failed"
 
-    # Kartın tamamını değil, sadece son 4 hanesini saklıyoruz.
+    # -------------------------------------------------
+    # Ödeme kaydını oluştur
+    # -------------------------------------------------
+    # Gerçek kart numarası veya CVV veritabanında saklanmaz.
+    # Sadece kart numarasının son dört hanesi tutulur.
     payment = Payment(
         booking_id=booking.id,
         user_id=current_user.id,
         amount=booking.total_price,
         status=payment_status,
-        card_last_four=payment_data.card_number[-4:]
+        card_last_four=normalized_card_number[-4:]
     )
 
+    # -------------------------------------------------
+    # Veritabanına kaydet
+    # -------------------------------------------------
     db.add(payment)
     db.commit()
     db.refresh(payment)

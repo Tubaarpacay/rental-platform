@@ -74,11 +74,8 @@ class Booking(Base):
 
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     renter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    address_id = Column(
-    Integer,
-    ForeignKey("addresses.id"),
-    nullable=True
-)
+    offer_id = Column(Integer,ForeignKey("offers.id"),nullable=True)
+    address_id = Column(Integer,ForeignKey("addresses.id"),nullable=True)
 
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
@@ -457,6 +454,67 @@ class ReturnRequest(Base):
     status = Column(
         String,
         default="return_requested"
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+
+# -------------------------------------------------
+# Teklif Tablosu
+# -------------------------------------------------
+class Offer(Base):
+    __tablename__ = "offers"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    item_id = Column(
+        Integer,
+        ForeignKey("items.id"),
+        nullable=False
+    )
+
+    renter_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    owner_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    start_date = Column(
+        Date,
+        nullable=False
+    )
+
+    end_date = Column(
+        Date,
+        nullable=False
+    )
+
+    offered_price = Column(
+        Numeric(10, 2),
+        nullable=False
+    )
+
+    message = Column(
+        Text,
+        nullable=True
+    )
+
+    # pending, accepted, rejected, cancelled
+    status = Column(
+        String,
+        default="pending"
     )
 
     created_at = Column(

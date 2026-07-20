@@ -43,8 +43,7 @@ def send_message(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Rezervasyona bağlı olarak
-    yeni mesaj gönderir.
+    Rezervasyona bağlı olarak yeni mesaj gönderir.
     """
 
     # -------------------------------------------------
@@ -130,6 +129,7 @@ def send_message(
     # -------------------------------------------------
     db.add(new_message)
     db.add(notification)
+
     db.commit()
     db.refresh(new_message)
 
@@ -149,8 +149,10 @@ def get_messages(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Rezervasyona ait
-    tüm mesajları listeler.
+    Rezervasyona ait tüm mesajları listeler.
+
+    Kullanıcının aldığı okunmamış mesajları
+    okundu olarak işaretler.
     """
 
     # -------------------------------------------------
@@ -192,10 +194,26 @@ def get_messages(
         )
 
     # -------------------------------------------------
-    # Mesajları getir
+    # Kullanıcıya gelen okunmamış mesajları okundu yap
     # -------------------------------------------------
-    return db.query(Message).filter(
+    db.query(Message).filter(
+        Message.booking_id == booking_id,
+        Message.receiver_id == current_user.id,
+        Message.is_read.is_(False)
+    ).update(
+        {"is_read": True},
+        synchronize_session=False
+    )
+
+    db.commit()
+
+    # -------------------------------------------------
+    # Mesajları tarih sırasına göre getir
+    # -------------------------------------------------
+    messages = db.query(Message).filter(
         Message.booking_id == booking_id
     ).order_by(
         Message.created_at.asc()
     ).all()
+
+    return messages

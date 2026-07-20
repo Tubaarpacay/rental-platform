@@ -327,3 +327,34 @@ class ReturnResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# -------------------------------------------------
+# Offer / Teklif Şemaları
+# -------------------------------------------------
+
+class OfferCreate(BaseModel):
+    item_id: int
+    start_date: date
+    end_date: date
+    offered_price: Decimal
+    message: str | None = None
+
+
+class OfferUpdate(BaseModel):
+    status: str
+
+
+class OfferResponse(BaseModel):
+    id: int
+    item_id: int
+    renter_id: int
+    owner_id: int
+    start_date: date
+    end_date: date
+    offered_price: Decimal
+    message: str | None
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

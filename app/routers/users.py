@@ -1,27 +1,44 @@
-# Kullanıcı işlemleri için router dosyası
+# -------------------------------------------------
+# Kullanıcı İşlemleri
+# -------------------------------------------------
 
-from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Form,
+    HTTPException,
+    status
+)
 from sqlalchemy.orm import Session
 
+from app.auth import (
+    create_access_token,
+    create_password_reset_expire_time,
+    create_password_reset_token,
+    create_verification_token,
+    get_current_user,
+    hash_password,
+    is_password_reset_token_expired,
+    verify_password
+)
 from app.database import get_db
+from app.email_utils import (
+    send_password_reset_email,
+    send_verification_email
+)
 from app.models import User
 from app.schemas import (
-    UserCreate,
-    UserResponse,
     ForgotPasswordRequest,
-    ResetPasswordRequest
+    ResetPasswordRequest,
+    UserCreate,
+    UserResponse
 )
-from app.auth import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    get_current_user,
-    create_password_reset_token,
-    create_password_reset_expire_time,
-    is_password_reset_token_expired
-)
-from app.email_utils import send_password_reset_email
 
+
+# -------------------------------------------------
+# Router Tanımlama
+# -------------------------------------------------
 router = APIRouter(
     prefix="/users",
     tags=["Users"]
@@ -31,17 +48,35 @@ router = APIRouter(
 # -------------------------------------------------
 # Kullanıcı Kayıt İşlemi
 # -------------------------------------------------
-@router.post("/register", response_model=UserResponse)
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED
+)
 def register_user(
     user_data: UserCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
     Yeni kullanıcı oluşturur.
+
+    Kayıt işlemi tamamlandıktan sonra kullanıcıya
+    hesap doğrulama e-postası gönderilir.
     """
 
+    # -------------------------------------------------
+    # E-posta adresini standartlaştır
+    # -------------------------------------------------
+    # Büyük/küçük harf ve boşluk farklılıklarının
+    # aynı e-posta için ayrı hesap oluşturmasını engeller.
+    email = str(user_data.email).strip().lower()
+
+    # -------------------------------------------------
+    # E-posta daha önce kullanılmış mı?
+    # -------------------------------------------------
     existing_user = db.query(User).filter(
-        User.email == user_data.email
+        User.email == email
     ).first()
 
     if existing_user:
@@ -50,19 +85,92 @@ def register_user(
             detail="Bu email adresi zaten kayıtlı."
         )
 
-    hashed_password = hash_password(user_data.password)
-
-    new_user = User(
-        email=user_data.email,
-        full_name=user_data.full_name,
-        hashed_password=hashed_password
+    # -------------------------------------------------
+    # Şifreyi hashle ve doğrulama tokenı oluştur
+    # -------------------------------------------------
+    hashed_password = hash_password(
+        user_data.password
     )
 
+    verification_token = create_verification_token()
+
+    # -------------------------------------------------
+    # Yeni kullanıcı oluştur
+    # -------------------------------------------------
+    new_user = User(
+        email=email,
+        full_name=user_data.full_name.strip(),
+        hashed_password=hashed_password,
+        is_verified=False,
+        verification_token=verification_token
+    )
+
+    # -------------------------------------------------
+    # Veritabanına kaydet
+    # -------------------------------------------------
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
+    # -------------------------------------------------
+    # E-posta doğrulama bağlantısını oluştur
+    # -------------------------------------------------
+    verification_link = (
+        "http://127.0.0.1:8000/users/verify-email"
+        f"?token={verification_token}"
+    )
+
+    # -------------------------------------------------
+    # Doğrulama e-postasını arka planda gönder
+    # -------------------------------------------------
+    background_tasks.add_task(
+        send_verification_email,
+        receiver_email=new_user.email,
+        verification_link=verification_link
+    )
+
     return new_user
+
+
+# -------------------------------------------------
+# E-posta Doğrulama İşlemi
+# -------------------------------------------------
+@router.get("/verify-email")
+def verify_email(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    E-posta doğrulama tokenını kontrol eder.
+
+    Token geçerliyse kullanıcının hesabı
+    doğrulanmış olarak işaretlenir.
+    """
+
+    # -------------------------------------------------
+    # Token ile kullanıcıyı bul
+    # -------------------------------------------------
+    user = db.query(User).filter(
+        User.verification_token == token
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz doğrulama bağlantısı."
+        )
+
+    # -------------------------------------------------
+    # Hesabı doğrulanmış olarak güncelle
+    # -------------------------------------------------
+    user.is_verified = True
+    user.verification_token = None
+
+    db.commit()
+
+    return {
+        "message": "Email adresiniz başarıyla doğrulandı."
+    }
 
 
 # -------------------------------------------------
@@ -75,20 +183,35 @@ def login_user(
     db: Session = Depends(get_db)
 ):
     """
-    Kullanıcının giriş yapmasını sağlar.
-    Swagger OAuth2 ile uyumlu şekilde form-data kullanır.
+    Kullanıcının sisteme giriş yapmasını sağlar.
+
+    Swagger OAuth2 yapısıyla uyumlu olması için
+    kullanıcı bilgileri form-data olarak alınır.
     """
 
+    # -------------------------------------------------
+    # E-posta adresini standartlaştır
+    # -------------------------------------------------
+    email = username.strip().lower()
+
+    # -------------------------------------------------
+    # Kullanıcıyı bul
+    # -------------------------------------------------
     user = db.query(User).filter(
-        User.email == username
+        User.email == email
     ).first()
 
+    # Kullanıcının bulunup bulunmadığı hakkında
+    # ayrıntılı bilgi vermeden genel hata döndürülür.
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email veya şifre hatalı."
         )
 
+    # -------------------------------------------------
+    # Şifreyi doğrula
+    # -------------------------------------------------
     if not verify_password(
         password,
         user.hashed_password
@@ -98,6 +221,21 @@ def login_user(
             detail="Email veya şifre hatalı."
         )
 
+    # -------------------------------------------------
+    # E-posta doğrulanmış mı?
+    # -------------------------------------------------
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Giriş yapmadan önce email "
+                "adresinizi doğrulamalısınız."
+            )
+        )
+
+    # -------------------------------------------------
+    # JWT access token oluştur
+    # -------------------------------------------------
     access_token = create_access_token(
         data={"sub": user.email}
     )
@@ -114,25 +252,42 @@ def login_user(
 @router.post("/forgot-password")
 def forgot_password(
     request: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
-    Kullanıcı e-posta adresini gönderir.
+    Kullanıcının e-posta adresine şifre sıfırlama
+    bağlantısı gönderilmesini sağlar.
 
-    Güvenlik nedeniyle email sistemde kayıtlı olsa da olmasa da
-    aynı mesaj döndürülür. Böylece sistemde hangi e-postaların
-    kayıtlı olduğu dışarıdan anlaşılamaz.
+    Güvenlik nedeniyle e-posta kayıtlı olsun veya olmasın
+    kullanıcıya aynı cevap döndürülür.
     """
 
+    # -------------------------------------------------
+    # E-posta adresini standartlaştır
+    # -------------------------------------------------
+    email = str(request.email).strip().lower()
+
+    # -------------------------------------------------
+    # Kullanıcıyı bul
+    # -------------------------------------------------
     user = db.query(User).filter(
-        User.email == request.email
+        User.email == email
     ).first()
 
+    # E-posta sistemde kayıtlı değilse de aynı mesajı döndür.
+    # Böylece sistemde hangi e-postaların kayıtlı olduğu anlaşılmaz.
     if not user:
         return {
-            "message": "Eğer bu email adresi kayıtlıysa şifre sıfırlama bağlantısı gönderildi."
+            "message": (
+                "Eğer bu email adresi kayıtlıysa "
+                "şifre sıfırlama bağlantısı gönderildi."
+            )
         }
 
+    # -------------------------------------------------
+    # Şifre sıfırlama tokenı ve geçerlilik süresi oluştur
+    # -------------------------------------------------
     reset_token = create_password_reset_token()
     reset_expires = create_password_reset_expire_time()
 
@@ -142,15 +297,30 @@ def forgot_password(
     db.commit()
     db.refresh(user)
 
-    reset_link = f"http://127.0.0.1:8000/reset-password?token={reset_token}"
+    # -------------------------------------------------
+    # Şifre sıfırlama bağlantısını oluştur
+    # -------------------------------------------------
+    # Frontend geliştirildiğinde bu adres,
+    # frontend şifre sıfırlama sayfasıyla değiştirilecek.
+    reset_link = (
+        "http://127.0.0.1:8000/reset-password"
+        f"?token={reset_token}"
+    )
 
-    send_password_reset_email(
+    # -------------------------------------------------
+    # Şifre sıfırlama e-postasını arka planda gönder
+    # -------------------------------------------------
+    background_tasks.add_task(
+        send_password_reset_email,
         receiver_email=user.email,
         reset_link=reset_link
     )
 
     return {
-        "message": "Eğer bu email adresi kayıtlıysa şifre sıfırlama bağlantısı gönderildi."
+        "message": (
+            "Eğer bu email adresi kayıtlıysa "
+            "şifre sıfırlama bağlantısı gönderildi."
+        )
     }
 
 
@@ -163,10 +333,15 @@ def reset_password(
     db: Session = Depends(get_db)
 ):
     """
-    Kullanıcı token ve yeni şifre gönderir.
-    Token doğruysa ve süresi geçmediyse şifre güncellenir.
+    Kullanıcının token ile yeni şifre belirlemesini sağlar.
+
+    Token geçerliyse ve süresi dolmamışsa
+    kullanıcının şifresi güncellenir.
     """
 
+    # -------------------------------------------------
+    # Token ile kullanıcıyı bul
+    # -------------------------------------------------
     user = db.query(User).filter(
         User.reset_password_token == request.token
     ).first()
@@ -174,21 +349,33 @@ def reset_password(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Geçersiz şifre sıfırlama token'ı."
+            detail="Geçersiz şifre sıfırlama tokenı."
         )
 
+    # -------------------------------------------------
+    # Token süresini kontrol et
+    # -------------------------------------------------
     if is_password_reset_token_expired(
         user.reset_password_expires
     ):
+        # Süresi dolmuş tokenı temizle
+        user.reset_password_token = None
+        user.reset_password_expires = None
+        db.commit()
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Şifre sıfırlama token'ının süresi dolmuş."
+            detail="Şifre sıfırlama tokenının süresi dolmuş."
         )
 
+    # -------------------------------------------------
+    # Yeni şifreyi hashleyerek kaydet
+    # -------------------------------------------------
     user.hashed_password = hash_password(
         request.new_password
     )
 
+    # Kullanılan tokenı geçersiz hale getir
     user.reset_password_token = None
     user.reset_password_expires = None
 
@@ -200,7 +387,7 @@ def reset_password(
 
 
 # -------------------------------------------------
-# Giriş yapan kullanıcı bilgileri
+# Giriş Yapan Kullanıcının Bilgileri
 # -------------------------------------------------
 @router.get(
     "/me",

@@ -1,0 +1,553 @@
+{% extends "base.html" %}
+
+{% block title %}
+Ana Sayfa | Rental Platform
+{% endblock %}
+
+
+{% block content %}
+
+<!-- =================================================
+     HERO BÖLÜMÜ
+================================================== -->
+<section class="hero-section">
+
+    <div class="row align-items-center g-5">
+
+        <!-- Sol taraf -->
+        <div class="col-lg-5">
+
+            <h1 class="hero-title">
+                İhtiyacın olan eşyayı kolayca kirala.
+            </h1>
+
+            <p class="hero-text">
+                Kullanmadığın eşyaları kiraya ver, ihtiyaç duyduğun
+                ürünleri uygun fiyatlarla bul. Teklif, rezervasyon,
+                ödeme ve iletişim süreçlerini tek platformdan yönet.
+            </p>
+
+            <div class="hero-badges">
+
+                <span>
+                    ✓ Güvenli
+                </span>
+
+                <span>
+                    ⚡ Hızlı
+                </span>
+
+                <span>
+                    ◇ Doğrulanmış
+                </span>
+
+            </div>
+
+            <div class="hero-buttons">
+
+                <a
+                    href="/items-page"
+                    class="btn btn-primary btn-lg"
+                >
+                    İlanları Keşfet
+                </a>
+
+                <a
+                    href="/register-page"
+                    class="btn btn-outline-primary btn-lg"
+                >
+                    İlan Ver
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- Sağ taraf -->
+        <div class="col-lg-7">
+
+            <div class="hero-visual">
+
+                <div class="visual-card">
+
+                    <div class="visual-item large">
+                        Koltuk
+                    </div>
+
+                    <div class="visual-item medium">
+                        Valiz
+                    </div>
+
+                    <div class="visual-item small">
+                        Matkap
+                    </div>
+
+                    <div class="visual-item small">
+                        Kamera
+                    </div>
+
+                    <div class="visual-item medium">
+                        Çadır
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =================================================
+     PLATFORM ÖZELLİKLERİ
+================================================== -->
+<section class="feature-section">
+
+    <div class="row g-0">
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    ✓
+                </div>
+
+                <h3>
+                    Güvenli Ödeme
+                </h3>
+
+                <p>
+                    Demo ödeme sistemiyle kiralama işlemlerini
+                    kolay ve kontrollü biçimde tamamla.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    💬
+                </div>
+
+                <h3>
+                    Kolay İletişim
+                </h3>
+
+                <p>
+                    Rezervasyona bağlı mesajlaşma sistemiyle
+                    ürün sahibiyle hızlıca iletişim kur.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    📅
+                </div>
+
+                <h3>
+                    Esnek Rezervasyon
+                </h3>
+
+                <p>
+                    Tarih aralığını seç ve ürünün uygunluğunu
+                    kontrol ederek rezervasyonunu oluştur.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    ☆
+                </div>
+
+                <h3>
+                    Yorum ve Puanlama
+                </h3>
+
+                <p>
+                    Kiralama tamamlandıktan sonra kullanıcıları
+                    değerlendir ve deneyimini paylaş.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =================================================
+     POPÜLER KATEGORİLER
+================================================== -->
+<section class="category-section">
+
+    <div class="section-heading">
+
+        <h2>
+            Popüler Kategoriler
+        </h2>
+
+        <span></span>
+
+    </div>
+
+
+    <div class="row g-4">
+
+        <!-- Kamera -->
+        <div class="col-md-6 col-lg-4">
+
+            <div class="category-card">
+
+                <div class="category-icon">
+                    📷
+                </div>
+
+                <h3>
+                    Fotoğraf ve Kamera
+                </h3>
+
+                <p>
+                    Kamera, lens, tripod ve çekim ekipmanlarını keşfet.
+                </p>
+
+                <a
+                    href="/items-page"
+                    class="category-link"
+                >
+                    İncele
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- Elektronik -->
+        <div class="col-md-6 col-lg-4">
+
+            <div class="category-card">
+
+                <div class="category-icon">
+                    💻
+                </div>
+
+                <h3>
+                    Elektronik
+                </h3>
+
+                <p>
+                    Laptop, tablet, monitör ve günlük teknoloji ürünleri.
+                </p>
+
+                <a
+                    href="/items-page"
+                    class="category-link"
+                >
+                    İncele
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- Elektrikli aletler -->
+        <div class="col-md-6 col-lg-4">
+
+            <div class="category-card">
+
+                <div class="category-icon">
+                    🛠️
+                </div>
+
+                <h3>
+                    Elektrikli Aletler
+                </h3>
+
+                <p>
+                    Matkap, testere ve çeşitli tamir ekipmanları.
+                </p>
+
+                <a
+                    href="/items-page"
+                    class="category-link"
+                >
+                    İncele
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- Spor ve outdoor -->
+        <div class="col-md-6 col-lg-4">
+
+            <div class="category-card">
+
+                <div class="category-icon">
+                    ⛺
+                </div>
+
+                <h3>
+                    Spor ve Outdoor
+                </h3>
+
+                <p>
+                    Kamp malzemeleri, bisiklet ve spor ekipmanları.
+                </p>
+
+                <a
+                    href="/items-page"
+                    class="category-link"
+                >
+                    İncele
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- Oyun -->
+        <div class="col-md-6 col-lg-4">
+
+            <div class="category-card">
+
+                <div class="category-icon">
+                    🎮
+                </div>
+
+                <h3>
+                    Oyun ve Eğlence
+                </h3>
+
+                <p>
+                    Oyun konsolu, kontrolcü ve eğlence ekipmanları.
+                </p>
+
+                <a
+                    href="/items-page"
+                    class="category-link"
+                >
+                    İncele
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- Bebek ve çocuk -->
+        <div class="col-md-6 col-lg-4">
+
+            <div class="category-card">
+
+                <div class="category-icon">
+                    🧸
+                </div>
+
+                <h3>
+                    Bebek ve Çocuk
+                </h3>
+
+                <p>
+                    Bebek arabası, çocuk ürünleri ve yardımcı ekipmanlar.
+                </p>
+
+                <a
+                    href="/items-page"
+                    class="category-link"
+                >
+                    İncele
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =================================================
+     NASIL ÇALIŞIR?
+================================================== -->
+<section class="how-section">
+
+    <div class="section-heading">
+
+        <h2>
+            Nasıl Çalışır?
+        </h2>
+
+        <span></span>
+
+    </div>
+
+
+    <div class="row g-4">
+
+        <!-- Adım 1 -->
+        <div class="col-md-6 col-lg-3">
+
+            <div class="step-card">
+
+                <div class="step-number">
+                    1
+                </div>
+
+                <h3>
+                    İlan Oluştur
+                </h3>
+
+                <p>
+                    Kullanmadığın eşyanı fotoğrafı, açıklaması
+                    ve günlük kiralama fiyatıyla ilana ekle.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- Adım 2 -->
+        <div class="col-md-6 col-lg-3">
+
+            <div class="step-card">
+
+                <div class="step-number">
+                    2
+                </div>
+
+                <h3>
+                    Teklif Al veya Gönder
+                </h3>
+
+                <p>
+                    Tarih ve fiyat bilgileriyle teklif oluştur
+                    ya da ilanına gelen teklifleri değerlendir.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- Adım 3 -->
+        <div class="col-md-6 col-lg-3">
+
+            <div class="step-card">
+
+                <div class="step-number">
+                    3
+                </div>
+
+                <h3>
+                    Rezervasyon Yap
+                </h3>
+
+                <p>
+                    Tarih uygunluğunu kontrol et, adresini seç
+                    ve rezervasyon işlemini tamamla.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- Adım 4 -->
+        <div class="col-md-6 col-lg-3">
+
+            <div class="step-card">
+
+                <div class="step-number">
+                    4
+                </div>
+
+                <h3>
+                    Teslim Et ve Değerlendir
+                </h3>
+
+                <p>
+                    Ürünü teslim et, kiralama sürecini tamamla
+                    ve kullanıcı deneyimini değerlendir.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =================================================
+     KAYIT ÇAĞRISI
+================================================== -->
+<section class="cta-section">
+
+    <div>
+
+        <h2>
+            Hemen aramıza katıl!
+        </h2>
+
+        <p>
+            Kullanmadığın eşyaları gelire dönüştür veya
+            ihtiyaç duyduğun ürünü uygun fiyatla kirala.
+        </p>
+
+    </div>
+
+
+    <div class="cta-buttons">
+
+        <a
+            href="/items-page"
+            class="btn btn-light"
+        >
+            İlanları Keşfet
+        </a>
+
+        <a
+            href="/register-page"
+            class="btn btn-outline-light"
+        >
+            Kayıt Ol
+        </a>
+
+    </div>
+
+</section>
+
+{% endblock %}

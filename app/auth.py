@@ -95,6 +95,13 @@ def create_access_token(data: dict):
         algorithm=ALGORITHM
     )
 
+def create_verification_token() -> str:
+    """
+    Kullanıcı email doğrulama işlemi için güvenli ve rastgele token üretir.
+    Bu token kullanıcıya e-posta ile gönderilecek.
+    """
+
+    return secrets.token_urlsafe(32)
 
 def create_password_reset_token() -> str:
     """

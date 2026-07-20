@@ -85,10 +85,13 @@ def create_review(
         )
 
     # Ödeme yapılmamış rezervasyona yorum yapılmasın
-    if booking.status != "paid":
+    if booking.status not in ["paid", "completed"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Yorum yapabilmek için rezervasyonun ödenmiş olması gerekir."
+            detail=(
+                "Yorum yapabilmek için rezervasyonun "
+                "ödenmiş veya tamamlanmış olması gerekir."
+            )
         )
 
     # Aynı kullanıcı aynı rezervasyona ikinci kez yorum yapamasın
